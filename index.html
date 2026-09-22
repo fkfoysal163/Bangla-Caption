@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bangla Caption Admin Panel</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f4f6f9;
+            color: #333;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #0d6efd;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        }
+
+        .card h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #1a252f;
+            border-bottom: 2px solid #eef2f5;
+            padding-bottom: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input[type="text"], select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #cccccc;
+            border-radius: 6px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        input[type="text"]:focus, select:focus, textarea:focus {
+            border-color: #0d6efd;
+        }
+
+        textarea {
+            resize: vertical;
+            height: 90px;
+        }
+
+        button {
+            background-color: #0d6efd;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background-color: #0b5ed7;
+        }
+
+        .btn-full {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+        }
+        .btn-danger:hover {
+            background-color: #bb2d3b;
+        }
+
+        .btn-warning {
+            background-color: #ffc107;
+            color: #000;
+        }
+        .btn-warning:hover {
+            background-color: #ffca2c;
+        }
+
+        .status-msg {
+            margin-top: 10px;
+            font-size: 14px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .success { color: #198754; }
+        .error { color: #dc3545; }
+
+        /* ফিল্টার সেকশন স্টাইল */
+        .filter-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filter-box input {
+            flex: 2;
+            min-width: 200px;
+        }
+
+        .filter-box select {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        /* ক্যাপশন তালিকার স্টাইল */
+        .caption-item {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            background-color: #fafafa;
+        }
+
+        .caption-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 6px;
+        }
+
+        .caption-text {
+            font-size: 15px;
+            margin-bottom: 10px;
+            color: #222;
+            white-space: pre-wrap;
+        }
+
+        .caption-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .caption-actions button {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        /* Edit Modal Stylings */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-weight: normal;
+        }
+
+        .badge-popular {
+            background-color: #ffc107;
+            color: #000;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>অ্যাডমিন প্যানেল</h1>
+
+        <!-- ১. ক্যাটাগরি যুক্ত করার ফর্ম -->
+        <div class="card">
+            <h2>নতুন ক্যাটাগরি যোগ করুন</h2>
+            <div class="form-group">
+                <label>ক্যাটাগরির নাম</label>
+                <input type="text" id="catName" placeholder="যেমন: ফানি">
+            </div>
+            <div class="form-group">
+                <label>ইমোজি</label>
+                <input type="text" id="catEmoji" placeholder="যেমন: 😄">
+            </div>
+            <div class="form-group">
+                <label>ব্যাকগ্রাউন্ড কালার হেক্স কোড</label>
+                <input type="text" id="catBgColor" placeholder="যেমন: #E3F2FD">
+            </div>
+            <button id="btnSaveCategory" class="btn-full">ক্যাটাগরি সেভ করুন</button>
+            <div id="catStatus" class="status-msg"></div>
+        </div>
+
+        <!-- ২. ক্যাপশন যুক্ত করার ফর্ম -->
+        <div class="card">
+            <h2>নতুন ক্যাপশন যোগ করুন</h2>
+            <div class="form-group">
+                <label>ক্যাটাগরি সিলেক্ট করুন</label>
+                <select id="categorySelect">
+                    <option value="">ক্যাটাগরি লোড হচ্ছে...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>ক্যাপশন টেক্সট</label>
+                <textarea id="captionText" placeholder="এখানে ক্যাপশন লিখুন..."></textarea>
+            </div>
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="chkPopular"> জনপ্রিয় ক্যাপশন হিসেবে মার্ক করুন (Popular)
+                </label>
+            </div>
+            <button id="btnSaveCaption" class="btn-full">ক্যাপশন সেভ করুন</button>
+            <div id="captionStatus" class="status-msg"></div>
+        </div>
+
+        <!-- ৩. অ্যাড কন্ট্রোল সেকশন (যুক্ত করা হয়েছে) -->
+        <div class="card">
+            <h2>📢 Ad Control & Settings</h2>
+            
+            <div class="form-group">
+                <label>Start.io App ID</label>
+                <input type="text" id="startioAppId" placeholder="যেমন: 20xxxxxxx">
+            </div>
+
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="chkEnableStartio"> Start.io Ads চালু রাখুন (Enable)
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="chkEnableAdmob"> AdMob Ads চালু রাখুন (Enable)
+                </label>
+            </div>
+
+            <button id="btnSaveAdSettings" class="btn-full">Ads সেটিং সেভ করুন</button>
+            <div id="adStatus" class="status-msg"></div>
+        </div>
+
+        <!-- ৪. ক্যাপশন তালিকা, ফিল্টার এবং ম্যানেজ সেকশন -->
+        <div class="card">
+            <h2>সকল ক্যাপশন ম্যানেজ করুন</h2>
+            
+            <!-- নতুন সার্চ ও ফিল্টার ফিল্ড -->
+            <div class="filter-box">
+                <input type="text" id="searchInput" placeholder="🔍 ক্যাপশন লিখে খুঁজুন...">
+                <select id="filterCategorySelect">
+                    <option value="ALL">সকল ক্যাটাগরি</option>
+                </select>
+            </div>
+
+            <div id="captionListContainer">
+                <p style="text-align:center; color:#666;">ক্যাপশন লোড হচ্ছে...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- এডিট করার জন্য মডাল ডায়ালগ -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <h2>ক্যাপশন এডিট করুন</h2>
+            <input type="hidden" id="editCaptionId">
+            <input type="hidden" id="editOldCategoryId">
+            <div class="form-group">
+                <label>ক্যাটাগরি</label>
+                <select id="editCategorySelect"></select>
+            </div>
+            <div class="form-group">
+                <label>ক্যাপশন টেক্সট</label>
+                <textarea id="editCaptionText"></textarea>
+            </div>
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="editChkPopular"> জনপ্রিয় ক্যাপশন (Popular)
+                </label>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button id="btnCancelEdit" class="btn-danger" style="width: auto;">বাতিল</button>
+                <button id="btnUpdateCaption" style="width: auto;">আপডেট করুন</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Web SDK Integration -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, doc, setDoc, getDocs, updateDoc, deleteDoc, increment, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBg0epU_37BaTaNDO_DxgqOypikT8Y1aDg",
+            authDomain: "bangla-caption-160f2.firebaseapp.com",
+            projectId: "bangla-caption-160f2",
+            storageBucket: "bangla-caption-160f2.firebasestorage.app",
+            messagingSenderId: "611002140117",
+            appId: "1:611002140117:android:ec31cec78a77d87e02295c"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // গ্লোবাল ক্যাপশন অ্যারে (দ্রুত ফিল্টারিং এর জন্য)
+        let allCaptions = [];
+
+        // ক্যাটাগরি লোড করার ফাংশন
+        async function loadCategories() {
+            const select = document.getElementById("categorySelect");
+            const editSelect = document.getElementById("editCategorySelect");
+            const filterSelect = document.getElementById("filterCategorySelect");
+
+            select.innerHTML = '<option value="">ক্যাটাগরি সিলেক্ট করুন</option>';
+            editSelect.innerHTML = '';
+            filterSelect.innerHTML = '<option value="ALL">সকল ক্যাটাগরি</option>';
+
+            try {
+                const querySnapshot = await getDocs(collection(db, "categories"));
+                querySnapshot.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    
+                    const option = document.createElement("option");
+                    option.value = docSnap.id;
+                    option.dataset.name = data.name;
+                    option.textContent = (data.emoji ? data.emoji + " " : "") + data.name;
+                    
+                    select.appendChild(option);
+                    editSelect.appendChild(option.cloneNode(true));
+                    filterSelect.appendChild(option.cloneNode(true));
+                });
+            } catch (e) {
+                console.error("Error loading categories: ", e);
+            }
+        }
+
+        // ফায়ারবেস থেকে সকল ক্যাপশন লোড করার ফাংশন
+        async function loadCaptionsList() {
+            const listContainer = document.getElementById("captionListContainer");
+            listContainer.innerHTML = '<p style="text-align:center; color:#666;">ক্যাপশন লোড হচ্ছে...</p>';
+
+            try {
+                const querySnapshot = await getDocs(collection(db, "captions"));
+                allCaptions = [];
+
+                querySnapshot.forEach((docSnap) => {
+                    allCaptions.push(docSnap.data());
+                });
+
+                renderCaptions(allCaptions);
+            } catch(e) {
+                listContainer.innerHTML = `<p style="color:red; text-align:center;">এরর: ${e.message}</p>`;
+            }
+        }
+
+        // ইন্টারফেসে ক্যাপশন রেন্ডার করা
+        function renderCaptions(captionsToDisplay) {
+            const listContainer = document.getElementById("captionListContainer");
+            
+            if(captionsToDisplay.length === 0) {
+                listContainer.innerHTML = '<p style="text-align:center; color:#888;">কোনো ক্যাপশন পাওয়া যায়নি।</p>';
+                return;
+            }
+
+            listContainer.innerHTML = '';
+            captionsToDisplay.forEach((caption) => {
+                const popularTag = caption.isPopular ? '<span class="badge-popular">🔥 Popular</span>' : '';
+                
+                const item = document.createElement("div");
+                item.className = "caption-item";
+                item.innerHTML = `
+                    <div class="caption-header">
+                        <span>🏷️ ${caption.categoryName || 'General'} ${popularTag}</span>
+                        <span>📅 ${caption.date || ''}</span>
+                    </div>
+                    <div class="caption-text">${caption.captionText}</div>
+                    <div class="caption-actions">
+                        <button class="btn-warning btn-edit" data-id="${caption.id}" data-text="${caption.captionText}" data-catid="${caption.categoryId}" data-popular="${caption.isPopular || false}">এডিট</button>
+                        <button class="btn-danger btn-delete" data-id="${caption.id}" data-catid="${caption.categoryId}">ডিলিট</button>
+                    </div>
+                `;
+                listContainer.appendChild(item);
+            });
+
+            // ডিলিট বাটনে ক্লিক ইভেন্ট
+            document.querySelectorAll(".btn-delete").forEach(btn => {
+                btn.addEventListener("click", async (e) => {
+                    const id = e.target.dataset.id;
+                    const catId = e.target.dataset.catid;
+                    if(confirm("আপনি কি নিশ্চিত এই ক্যাপশনটি মুছে ফেলতে চান?")) {
+                        await deleteCaption(id, catId);
+                    }
+                });
+            });
+
+            // এডিট বাটনে ক্লিক ইভেন্ট
+            document.querySelectorAll(".btn-edit").forEach(btn => {
+                btn.addEventListener("click", (e) => {
+                    const id = e.target.dataset.id;
+                    const text = e.target.dataset.text;
+                    const catId = e.target.dataset.catid;
+                    const isPopular = e.target.dataset.popular === "true";
+                    
+                    document.getElementById("editCaptionId").value = id;
+                    document.getElementById("editOldCategoryId").value = catId;
+                    document.getElementById("editCaptionText").value = text;
+                    document.getElementById("editCategorySelect").value = catId;
+                    document.getElementById("editChkPopular").checked = isPopular;
+                    document.getElementById("editModal").style.display = "flex";
+                });
+            });
+        }
+
+        // সার্চ এবং ক্যাটাগরি ফিল্টার করার লজিক
+        function filterCaptions() {
+            const searchText = document.getElementById("searchInput").value.toLowerCase().trim();
+            const selectedCatId = document.getElementById("filterCategorySelect").value;
+
+            const filtered = allCaptions.filter(caption => {
+                const matchesSearch = caption.captionText.toLowerCase().includes(searchText);
+                const matchesCategory = (selectedCatId === "ALL") || (caption.categoryId === selectedCatId);
+                
+                return matchesSearch && matchesCategory;
+            });
+
+            renderCaptions(filtered);
+        }
+
+        document.getElementById("searchInput").addEventListener("input", filterCaptions);
+        document.getElementById("filterCategorySelect").addEventListener("change", filterCaptions);
+
+        // নতুন ক্যাটাগরি সেভ করা
+        document.getElementById("btnSaveCategory").addEventListener("click", async () => {
+            const name = document.getElementById("catName").value.trim();
+            const emoji = document.getElementById("catEmoji").value.trim();
+            const bgColor = document.getElementById("catBgColor").value.trim();
+            const status = document.getElementById("catStatus");
+
+            if (!name) {
+                status.className = "status-msg error";
+                status.textContent = "ক্যাটাগরির নাম দিন!";
+                return;
+            }
+
+            try {
+                const catRef = doc(collection(db, "categories"));
+                await setDoc(catRef, {
+                    id: catRef.id,
+                    name: name,
+                    emoji: emoji || "📌",
+                    bgColor: bgColor || "#F5F7FB",
+                    captionCount: 0
+                });
+
+                status.className = "status-msg success";
+                status.textContent = "ক্যাটাগরি সফলভাবে সেভ হয়েছে!";
+                
+                document.getElementById("catName").value = "";
+                document.getElementById("catEmoji").value = "";
+                document.getElementById("catBgColor").value = "";
+
+                loadCategories();
+            } catch (e) {
+                status.className = "status-msg error";
+                status.textContent = "ত্রুটি: " + e.message;
+            }
+        });
+
+        // নতুন ক্যাপশন সেভ করা
+        document.getElementById("btnSaveCaption").addEventListener("click", async () => {
+            const select = document.getElementById("categorySelect");
+            const categoryId = select.value;
+            const categoryName = select.options[select.selectedIndex]?.dataset.name || "";
+            const text = document.getElementById("captionText").value.trim();
+            const isPopular = document.getElementById("chkPopular").checked;
+            const status = document.getElementById("captionStatus");
+
+            if (!categoryId || !text) {
+                status.className = "status-msg error";
+                status.textContent = "ক্যাটাগরি সিলেক্ট ও ক্যাপশন টেক্সট দিন!";
+                return;
+            }
+
+            try {
+                const today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                const captionRef = doc(collection(db, "captions"));
+
+                await setDoc(captionRef, {
+                    id: captionRef.id,
+                    categoryId: categoryId,
+                    categoryName: categoryName,
+                    captionText: text,
+                    isPopular: isPopular,
+                    date: today
+                });
+
+                const catDocRef = doc(db, "categories", categoryId);
+                await updateDoc(catDocRef, { captionCount: increment(1) });
+
+                status.className = "status-msg success";
+                status.textContent = "ক্যাপশন সফলভাবে আপলোড হয়েছে!";
+                document.getElementById("captionText").value = "";
+                document.getElementById("chkPopular").checked = false;
+                
+                loadCaptionsList();
+            } catch (e) {
+                status.className = "status-msg error";
+                status.textContent = "ত্রুটি: " + e.message;
+            }
+        });
+
+        // Ads Settings লোড করার ফাংশন
+        async function loadAdSettings() {
+            try {
+                const docRef = doc(db, "settings", "ad_config");
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    document.getElementById("startioAppId").value = data.startioAppId || "";
+                    document.getElementById("chkEnableStartio").checked = data.enableStartio || false;
+                    document.getElementById("chkEnableAdmob").checked = data.enableAdmob || false;
+                }
+            } catch (e) {
+                console.error("Error loading ad settings: ", e);
+            }
+        }
+
+        // Ads Settings সেভ করার ফাংশন
+        document.getElementById("btnSaveAdSettings").addEventListener("click", async () => {
+            const appId = document.getElementById("startioAppId").value.trim();
+            const enableStartio = document.getElementById("chkEnableStartio").checked;
+            const enableAdmob = document.getElementById("chkEnableAdmob").checked;
+            const status = document.getElementById("adStatus");
+
+            try {
+                await setDoc(doc(db, "settings", "ad_config"), {
+                    startioAppId: appId,
+                    enableStartio: enableStartio,
+                    enableAdmob: enableAdmob
+                });
+
+                status.className = "status-msg success";
+                status.textContent = "Ads সেটিং সফলভাবে আপডেট হয়েছে!";
+            } catch (e) {
+                status.className = "status-msg error";
+                status.textContent = "ত্রুটি: " + e.message;
+            }
+        });
+
+        // ক্যাপশন আপডেট করা
+        document.getElementById("btnUpdateCaption").addEventListener("click", async () => {
+            const id = document.getElementById("editCaptionId").value;
+            const oldCatId = document.getElementById("editOldCategoryId").value;
+            const select = document.getElementById("editCategorySelect");
+            const newCatId = select.value;
+            const newCatName = select.options[select.selectedIndex]?.dataset.name || "";
+            const text = document.getElementById("editCaptionText").value.trim();
+            const isPopular = document.getElementById("editChkPopular").checked;
+
+            if(!text) return;
+
+            try {
+                const captionRef = doc(db, "captions", id);
+                await updateDoc(captionRef, {
+                    categoryId: newCatId,
+                    categoryName: newCatName,
+                    captionText: text,
+                    isPopular: isPopular
+                });
+
+                if(oldCatId !== newCatId && oldCatId) {
+                    await updateDoc(doc(db, "categories", oldCatId), { captionCount: increment(-1) });
+                    await updateDoc(doc(db, "categories", newCatId), { captionCount: increment(1) });
+                }
+
+                document.getElementById("editModal").style.display = "none";
+                loadCaptionsList();
+            } catch(e) {
+                alert("আপডেট ব্যর্থ হয়েছে: " + e.message);
+            }
+        });
+
+        // এডিট বাতিল
+        document.getElementById("btnCancelEdit").addEventListener("click", () => {
+            document.getElementById("editModal").style.display = "none";
+        });
+
+        // ক্যাপশন মুছে ফেলা
+        async function deleteCaption(id, catId) {
+            try {
+                await deleteDoc(doc(db, "captions", id));
+                if(catId) {
+                    await updateDoc(doc(db, "categories", catId), { captionCount: increment(-1) });
+                }
+                loadCaptionsList();
+            } catch(e) {
+                alert("ডিলিট করতে সমস্যা হয়েছে: " + e.message);
+            }
+        }
+
+        // পেজ লোড হওয়ার পর সবকিছু কল করা
+        window.addEventListener("DOMContentLoaded", () => {
+            loadCategories();
+            loadCaptionsList();
+            loadAdSettings();
+        });
+    </script>
+</body>
+</html>
