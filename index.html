@@ -121,7 +121,6 @@
         .success { color: #198754; }
         .error { color: #dc3545; }
 
-        /* ফিল্টার সেকশন স্টাইল */
         .filter-box {
             display: flex;
             gap: 10px;
@@ -139,8 +138,7 @@
             min-width: 150px;
         }
 
-        /* ক্যাপশন তালিকার স্টাইল */
-        .caption-item {
+        .caption-item, .cat-item {
             border: 1px solid #e0e0e0;
             border-radius: 8px;
             padding: 12px;
@@ -148,9 +146,10 @@
             background-color: #fafafa;
         }
 
-        .caption-header {
+        .caption-header, .cat-header {
             display: flex;
             justify-content: space-between;
+            align-items: center;
             font-size: 12px;
             color: #666;
             margin-bottom: 6px;
@@ -168,12 +167,11 @@
             gap: 8px;
         }
 
-        .caption-actions button {
+        .caption-actions button, .cat-header button {
             padding: 6px 12px;
             font-size: 12px;
         }
 
-        /* Edit Modal Stylings */
         .modal {
             display: none;
             position: fixed;
@@ -208,6 +206,12 @@
             border-radius: 4px;
             font-weight: bold;
         }
+
+        .category-list {
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
@@ -217,7 +221,7 @@
 
         <!-- ১. ক্যাটাগরি যুক্ত করার ফর্ম -->
         <div class="card">
-            <h2>নতুন ক্যাটাগরি যোগ করুন</h2>
+            <h2>নতুন ক্যাটাগরি যোগ ও ম্যানেজ করুন</h2>
             <div class="form-group">
                 <label>ক্যাটাগরির নাম</label>
                 <input type="text" id="catName" placeholder="যেমন: ফানি">
@@ -232,6 +236,10 @@
             </div>
             <button id="btnSaveCategory" class="btn-full">ক্যাটাগরি সেভ করুন</button>
             <div id="catStatus" class="status-msg"></div>
+
+            <div class="category-list" id="categoryManageContainer">
+                <!-- Registered categories list displays here -->
+            </div>
         </div>
 
         <!-- ২. ক্যাপশন যুক্ত করার ফর্ম -->
@@ -256,28 +264,27 @@
             <div id="captionStatus" class="status-msg"></div>
         </div>
 
-        <!-- ৩. অ্যাড কন্ট্রোল সেকশন (যুক্ত করা হয়েছে) -->
+        <!-- ৩. AdMob কন্ট্রোল সেকশন (Updated) -->
         <div class="card">
-            <h2>📢 Ad Control & Settings</h2>
+            <h2>📢 AdMob Control & Settings</h2>
             
-            <div class="form-group">
-                <label>Start.io App ID</label>
-                <input type="text" id="startioAppId" placeholder="যেমন: 20xxxxxxx">
-            </div>
-
-            <div class="form-group">
-                <label class="checkbox-label">
-                    <input type="checkbox" id="chkEnableStartio"> Start.io Ads চালু রাখুন (Enable)
-                </label>
-            </div>
-
             <div class="form-group">
                 <label class="checkbox-label">
                     <input type="checkbox" id="chkEnableAdmob"> AdMob Ads চালু রাখুন (Enable)
                 </label>
             </div>
 
-            <button id="btnSaveAdSettings" class="btn-full">Ads সেটিং সেভ করুন</button>
+            <div class="form-group">
+                <label>AdMob Banner Ad Unit ID</label>
+                <input type="text" id="admobBannerId" placeholder="ca-app-pub-xxxxxxxxxxxxxxxx/xxxxxxxxxx">
+            </div>
+
+            <div class="form-group">
+                <label>AdMob Interstitial Ad Unit ID</label>
+                <input type="text" id="admobInterstitialId" placeholder="ca-app-pub-xxxxxxxxxxxxxxxx/xxxxxxxxxx">
+            </div>
+
+            <button id="btnSaveAdSettings" class="btn-full">AdMob সেটিং সেভ করুন</button>
             <div id="adStatus" class="status-msg"></div>
         </div>
 
@@ -285,7 +292,6 @@
         <div class="card">
             <h2>সকল ক্যাপশন ম্যানেজ করুন</h2>
             
-            <!-- নতুন সার্চ ও ফিল্টার ফিল্ড -->
             <div class="filter-box">
                 <input type="text" id="searchInput" placeholder="🔍 ক্যাপশন লিখে খুঁজুন...">
                 <select id="filterCategorySelect">
@@ -325,10 +331,12 @@
         </div>
     </div>
 
-    <!-- Firebase Web SDK Integration -->
+    <!-- Firebase Web SDK Integration (v10 Modular API) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, doc, setDoc, getDocs, updateDoc, deleteDoc, increment, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { 
+            getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, increment, getDoc, onSnapshot 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBg0epU_37BaTaNDO_DxgqOypikT8Y1aDg",
@@ -342,22 +350,25 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // গ্লোবাল ক্যাপশন অ্যারে (দ্রুত ফিল্টারিং এর জন্য)
         let allCaptions = [];
 
-        // ক্যাটাগরি লোড করার ফাংশন
-        async function loadCategories() {
+        // Realtime Category Loader & Manage Options
+        function listenCategories() {
             const select = document.getElementById("categorySelect");
             const editSelect = document.getElementById("editCategorySelect");
             const filterSelect = document.getElementById("filterCategorySelect");
+            const catContainer = document.getElementById("categoryManageContainer");
 
-            select.innerHTML = '<option value="">ক্যাটাগরি সিলেক্ট করুন</option>';
-            editSelect.innerHTML = '';
-            filterSelect.innerHTML = '<option value="ALL">সকল ক্যাটাগরি</option>';
+            onSnapshot(collection(db, "categories"), (snapshot) => {
+                const selectedVal = select.value;
+                const filterVal = filterSelect.value;
 
-            try {
-                const querySnapshot = await getDocs(collection(db, "categories"));
-                querySnapshot.forEach((docSnap) => {
+                select.innerHTML = '<option value="">ক্যাটাগরি সিলেক্ট করুন</option>';
+                editSelect.innerHTML = '';
+                filterSelect.innerHTML = '<option value="ALL">সকল ক্যাটাগরি</option>';
+                catContainer.innerHTML = '';
+
+                snapshot.forEach((docSnap) => {
                     const data = docSnap.data();
                     
                     const option = document.createElement("option");
@@ -368,36 +379,52 @@
                     select.appendChild(option);
                     editSelect.appendChild(option.cloneNode(true));
                     filterSelect.appendChild(option.cloneNode(true));
+
+                    // Category Management UI Item
+                    const catItem = document.createElement("div");
+                    catItem.className = "cat-item";
+                    catItem.innerHTML = `
+                        <div class="cat-header">
+                            <span>${data.emoji || '📌'} <strong>${data.name}</strong> (${data.captionCount || 0} ক্যাপশন)</span>
+                            <button class="btn-danger btn-delete-cat" data-id="${docSnap.id}">মুছুন</button>
+                        </div>
+                    `;
+                    catContainer.appendChild(catItem);
                 });
-            } catch (e) {
-                console.error("Error loading categories: ", e);
-            }
+
+                select.value = selectedVal;
+                filterSelect.value = filterVal;
+
+                document.querySelectorAll(".btn-delete-cat").forEach(btn => {
+                    btn.onclick = async (e) => {
+                        const catId = e.target.dataset.id;
+                        if (confirm("ক্যাটাগরিটি ডিলিট করতে চান? এতে ক্যাটাগরির আইডি মুছে যাবে।")) {
+                            await deleteDoc(doc(db, "categories", catId));
+                        }
+                    };
+                });
+            });
         }
 
-        // ফায়ারবেস থেকে সকল ক্যাপশন লোড করার ফাংশন
-        async function loadCaptionsList() {
+        // Realtime Caption Loader
+        function listenCaptions() {
             const listContainer = document.getElementById("captionListContainer");
-            listContainer.innerHTML = '<p style="text-align:center; color:#666;">ক্যাপশন লোড হচ্ছে...</p>';
 
-            try {
-                const querySnapshot = await getDocs(collection(db, "captions"));
+            onSnapshot(collection(db, "captions"), (snapshot) => {
                 allCaptions = [];
-
-                querySnapshot.forEach((docSnap) => {
+                snapshot.forEach((docSnap) => {
                     allCaptions.push(docSnap.data());
                 });
-
-                renderCaptions(allCaptions);
-            } catch(e) {
-                listContainer.innerHTML = `<p style="color:red; text-align:center;">এরর: ${e.message}</p>`;
-            }
+                filterCaptions();
+            }, (error) => {
+                listContainer.innerHTML = `<p style="color:red; text-align:center;">এরর: ${error.message}</p>`;
+            });
         }
 
-        // ইন্টারফেসে ক্যাপশন রেন্ডার করা
         function renderCaptions(captionsToDisplay) {
             const listContainer = document.getElementById("captionListContainer");
             
-            if(captionsToDisplay.length === 0) {
+            if (captionsToDisplay.length === 0) {
                 listContainer.innerHTML = '<p style="text-align:center; color:#888;">কোনো ক্যাপশন পাওয়া যায়নি।</p>';
                 return;
             }
@@ -422,20 +449,18 @@
                 listContainer.appendChild(item);
             });
 
-            // ডিলিট বাটনে ক্লিক ইভেন্ট
             document.querySelectorAll(".btn-delete").forEach(btn => {
-                btn.addEventListener("click", async (e) => {
+                btn.onclick = async (e) => {
                     const id = e.target.dataset.id;
                     const catId = e.target.dataset.catid;
-                    if(confirm("আপনি কি নিশ্চিত এই ক্যাপশনটি মুছে ফেলতে চান?")) {
+                    if (confirm("আপনি কি নিশ্চিত এই ক্যাপশনটি মুছে ফেলতে চান?")) {
                         await deleteCaption(id, catId);
                     }
-                });
+                };
             });
 
-            // এডিট বাটনে ক্লিক ইভেন্ট
             document.querySelectorAll(".btn-edit").forEach(btn => {
-                btn.addEventListener("click", (e) => {
+                btn.onclick = (e) => {
                     const id = e.target.dataset.id;
                     const text = e.target.dataset.text;
                     const catId = e.target.dataset.catid;
@@ -447,19 +472,17 @@
                     document.getElementById("editCategorySelect").value = catId;
                     document.getElementById("editChkPopular").checked = isPopular;
                     document.getElementById("editModal").style.display = "flex";
-                });
+                };
             });
         }
 
-        // সার্চ এবং ক্যাটাগরি ফিল্টার করার লজিক
         function filterCaptions() {
             const searchText = document.getElementById("searchInput").value.toLowerCase().trim();
             const selectedCatId = document.getElementById("filterCategorySelect").value;
 
             const filtered = allCaptions.filter(caption => {
-                const matchesSearch = caption.captionText.toLowerCase().includes(searchText);
+                const matchesSearch = caption.captionText ? caption.captionText.toLowerCase().includes(searchText) : false;
                 const matchesCategory = (selectedCatId === "ALL") || (caption.categoryId === selectedCatId);
-                
                 return matchesSearch && matchesCategory;
             });
 
@@ -469,7 +492,7 @@
         document.getElementById("searchInput").addEventListener("input", filterCaptions);
         document.getElementById("filterCategorySelect").addEventListener("change", filterCaptions);
 
-        // নতুন ক্যাটাগরি সেভ করা
+        // Save New Category
         document.getElementById("btnSaveCategory").addEventListener("click", async () => {
             const name = document.getElementById("catName").value.trim();
             const emoji = document.getElementById("catEmoji").value.trim();
@@ -498,15 +521,13 @@
                 document.getElementById("catName").value = "";
                 document.getElementById("catEmoji").value = "";
                 document.getElementById("catBgColor").value = "";
-
-                loadCategories();
             } catch (e) {
                 status.className = "status-msg error";
                 status.textContent = "ত্রুটি: " + e.message;
             }
         });
 
-        // নতুন ক্যাপশন সেভ করা
+        // Save New Caption
         document.getElementById("btnSaveCaption").addEventListener("click", async () => {
             const select = document.getElementById("categorySelect");
             const categoryId = select.value;
@@ -541,15 +562,13 @@
                 status.textContent = "ক্যাপশন সফলভাবে আপলোড হয়েছে!";
                 document.getElementById("captionText").value = "";
                 document.getElementById("chkPopular").checked = false;
-                
-                loadCaptionsList();
             } catch (e) {
                 status.className = "status-msg error";
                 status.textContent = "ত্রুটি: " + e.message;
             }
         });
 
-        // Ads Settings লোড করার ফাংশন
+        // Load AdMob Settings
         async function loadAdSettings() {
             try {
                 const docRef = doc(db, "settings", "ad_config");
@@ -557,38 +576,38 @@
 
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    document.getElementById("startioAppId").value = data.startioAppId || "";
-                    document.getElementById("chkEnableStartio").checked = data.enableStartio || false;
                     document.getElementById("chkEnableAdmob").checked = data.enableAdmob || false;
+                    document.getElementById("admobBannerId").value = data.bannerAdUnitId || "";
+                    document.getElementById("admobInterstitialId").value = data.interstitialAdUnitId || "";
                 }
             } catch (e) {
                 console.error("Error loading ad settings: ", e);
             }
         }
 
-        // Ads Settings সেভ করার ফাংশন
+        // Save AdMob Settings
         document.getElementById("btnSaveAdSettings").addEventListener("click", async () => {
-            const appId = document.getElementById("startioAppId").value.trim();
-            const enableStartio = document.getElementById("chkEnableStartio").checked;
             const enableAdmob = document.getElementById("chkEnableAdmob").checked;
+            const bannerAdUnitId = document.getElementById("admobBannerId").value.trim();
+            const interstitialAdUnitId = document.getElementById("admobInterstitialId").value.trim();
             const status = document.getElementById("adStatus");
 
             try {
                 await setDoc(doc(db, "settings", "ad_config"), {
-                    startioAppId: appId,
-                    enableStartio: enableStartio,
-                    enableAdmob: enableAdmob
+                    enableAdmob: enableAdmob,
+                    bannerAdUnitId: bannerAdUnitId,
+                    interstitialAdUnitId: interstitialAdUnitId
                 });
 
                 status.className = "status-msg success";
-                status.textContent = "Ads সেটিং সফলভাবে আপডেট হয়েছে!";
+                status.textContent = "AdMob সেটিং সফলভাবে আপডেট হয়েছে!";
             } catch (e) {
                 status.className = "status-msg error";
                 status.textContent = "ত্রুটি: " + e.message;
             }
         });
 
-        // ক্যাপশন আপডেট করা
+        // Update Caption
         document.getElementById("btnUpdateCaption").addEventListener("click", async () => {
             const id = document.getElementById("editCaptionId").value;
             const oldCatId = document.getElementById("editOldCategoryId").value;
@@ -598,7 +617,7 @@
             const text = document.getElementById("editCaptionText").value.trim();
             const isPopular = document.getElementById("editChkPopular").checked;
 
-            if(!text) return;
+            if (!text) return;
 
             try {
                 const captionRef = doc(db, "captions", id);
@@ -609,40 +628,38 @@
                     isPopular: isPopular
                 });
 
-                if(oldCatId !== newCatId && oldCatId) {
+                if (oldCatId !== newCatId && oldCatId) {
                     await updateDoc(doc(db, "categories", oldCatId), { captionCount: increment(-1) });
                     await updateDoc(doc(db, "categories", newCatId), { captionCount: increment(1) });
                 }
 
                 document.getElementById("editModal").style.display = "none";
-                loadCaptionsList();
-            } catch(e) {
+            } catch (e) {
                 alert("আপডেট ব্যর্থ হয়েছে: " + e.message);
             }
         });
 
-        // এডিট বাতিল
+        // Cancel Edit Modal
         document.getElementById("btnCancelEdit").addEventListener("click", () => {
             document.getElementById("editModal").style.display = "none";
         });
 
-        // ক্যাপশন মুছে ফেলা
+        // Delete Caption
         async function deleteCaption(id, catId) {
             try {
                 await deleteDoc(doc(db, "captions", id));
-                if(catId) {
+                if (catId) {
                     await updateDoc(doc(db, "categories", catId), { captionCount: increment(-1) });
                 }
-                loadCaptionsList();
-            } catch(e) {
+            } catch (e) {
                 alert("ডিলিট করতে সমস্যা হয়েছে: " + e.message);
             }
         }
 
-        // পেজ লোড হওয়ার পর সবকিছু কল করা
+        // Initialize Listeners
         window.addEventListener("DOMContentLoaded", () => {
-            loadCategories();
-            loadCaptionsList();
+            listenCategories();
+            listenCaptions();
             loadAdSettings();
         });
     </script>
